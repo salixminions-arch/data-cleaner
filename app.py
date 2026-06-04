@@ -76,7 +76,7 @@ if uploaded_file is not None:
 
     # 5. UI PREVIEW RENDER (Updates instantly when checkboxes are flipped)
     st.subheader("👀 Cleaned Data Preview")
-    st.dataframe(working_df.head(5))
+    st.dataframe(working_df.head(5))git commit -m "Your descriptive update message"
 
     # 6. CONVERT CLEAN DATA INTO LIVE DOWNLOAD STREAM
     output_buffer = io.BytesIO()
