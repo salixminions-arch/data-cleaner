@@ -14,8 +14,8 @@ if st.button("🔄 Reset & Clear Everything", use_container_width=True):
         del st.session_state[key]
     st.rerun()
 
-# 2. SINGLE FILE UPLOAD INTERFACE
-uploaded_file = st.file_uploader("Upload your messy spreadsheet here (CSV or Excel)", type=["csv", "xlsx"], accept_file_output=False)
+# 2. FILE UPLOAD INTERFACE (Streamlit handles single files by default)
+uploaded_file = st.file_uploader("Upload your messy spreadsheet here (CSV or Excel)", type=["csv", "xlsx"])
 
 if uploaded_file is not None:
     # Cache raw file state to prevent unnecessary re-uploads on widget toggles
@@ -32,7 +32,7 @@ if uploaded_file is not None:
 
     working_df = st.session_state["raw_df"].copy()
     
-    # 3. SIDEBAR CONTROLS (Your basic requested features)
+    # 3. SIDEBAR CONTROLS
     st.sidebar.header("🛠️ Auto-Cleaning Toggles")
     drop_empty = st.sidebar.checkbox("Drop Completely Empty Rows", value=True)
     remove_dup = st.sidebar.checkbox("Delete Duplicate Rows", value=True)
@@ -92,7 +92,7 @@ if uploaded_file is not None:
                 working_df[col] = working_df[col].round(2)
                 stats["nums_fixed"] += 1
 
-    # 5. VISUAL PROOF DASHBOARD (Shows the user what they saved time on)
+    # 5. VISUAL PROOF DASHBOARD
     st.subheader("📊 Cleaning Report")
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("Empty Rows Hit", stats["empty_removed"])
@@ -108,7 +108,6 @@ if uploaded_file is not None:
     st.write("---")
     base_name = st.session_state['file_name'].rsplit('.', 1)[0]
     
-    # Cache download to prevent dataset re-compiling unless the data changes
     @st.cache_data(show_spinner=False)
     def convert_df(df):
         return df.to_csv(index=False).encode('utf-8')
