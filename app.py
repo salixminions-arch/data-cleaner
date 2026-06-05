@@ -86,4 +86,39 @@ if uploaded_file is not None:
     # 5. VISUAL PROOF DASHBOARD
     st.subheader("📊 Cleaning Report")
     c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Empty Rows
+    c1.metric("Empty Rows Hit", stats["empty_removed"])
+    c2.metric("Duplicates Hit", stats["dups_removed"])
+    c3.metric("Text Columns Fixed", stats["text_fixed"])
+    c4.metric("Numbers Repaired", stats["nums_fixed"])
+
+    # 6. BEFORE VS AFTER PREVIEW TABS
+    st.subheader("👀 Data Preview")
+    
+    # This creates clickable tabs right in the UI
+    tab_clean, tab_original = st.tabs(["✨ Cleaned Data Version", "⚠️ Original Messy Version"])
+    
+    with tab_clean:
+        st.write("Here is your beautifully formatted data:")
+        st.dataframe(working_df.head(15), use_container_width=True)
+        
+    with tab_original:
+        st.write("Here is the raw data exactly how you uploaded it:")
+        st.dataframe(original_df.head(15), use_container_width=True)
+
+    # 7. DOWNLOAD STREAM
+    st.write("---")
+    base_name = st.session_state['file_name'].rsplit('.', 1)[0]
+    
+    @st.cache_data(show_spinner=False)
+    def convert_df(df):
+        return df.to_csv(index=False).encode('utf-8')
+
+    csv_bytes = convert_df(working_df)
+
+    st.download_button(
+        label="🚀 Download Cleaned CSV",
+        data=csv_bytes,
+        file_name=f"cleaned_{base_name}.csv",
+        mime="text/csv",
+        use_container_width=True
+    )
