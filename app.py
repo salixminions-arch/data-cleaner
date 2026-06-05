@@ -45,37 +45,16 @@ if uploaded_file is not None:
             working_df['Phone'] = working_df['Phone'].astype(str).str.replace(r'\D', '', regex=True)
             working_df['Phone'] = working_df['Phone'].replace('', 'MISSING')
 
-    # Wrap individual processing steps defensively
     if fix_dates_money:
-        try:
-            date_cols = working_df(['date', 'time', 'created', 'signup'])
-            for c in date_cols:
-                working_df[c] = pd.to_datetime(working_df[c], errors='coerce').dt.strftime('%Y-%m-%d')
-        except Exception as e:
-            st.sidebar.warning("⚠️ Some complex date formats couldn't be parsed automatically.")
+        if 'Signup Date' in working_df.columns:
+            working_df['Signup Date'] = pd.to_datetime(working_df['Signup Date'], errors='coerce').dt.strftime('%Y-%m-%d')
+        if 'Revenue' in working_df.columns:
+            working_df['Revenue'] = working_df['Revenue'].astype(str).str.replace(r'[$,]', '', regex=True)
+            working_df['Revenue'] = pd.to_numeric(working_df['Revenue'], errors='coerce').fillna(0.0)
 
-        try:
-            money_cols = working_df(['revenue', 'amount', 'price', 'sales', 'cost', 'total'])
-            for c in money_cols:
-                if working_df[c].dtype == 'object':
-                    working_df[c] = working_df[c].astype(str).str.replace(r'[$,\s]', '', regex=True)
-                working_df[c] = pd.to_numeric(working_df[c], errors='coerce').fillna(0.0)
-        except Exception as e:
-            st.sidebar.warning("⚠️ Money normalization skipped on highly complex character strings.")
-            
     # 5. UI PREVIEW RENDER (Updates instantly when checkboxes are flipped)
     st.subheader("👀 Cleaned Data Preview")
     st.dataframe(working_df.head(5))
-    st.subheader("🎯 Engine Targets Detected")
-    with st.expander("Click to see which columns the AI-cleaner targeted", expanded=True):
-        # Re-run the finder logic visually for the user
-        detected_dates = working_df(['date', 'time', 'created', 'signup'])
-        detected_money = working_df(['revenue', 'amount', 'price', 'sales', 'cost', 'total'])
-        detected_phones = working_df(['phone', 'tel', 'mobile', 'ph'])
-        
-        st.markdown(f"**📅 Date Columns Identified:** {', '.join(detected_dates) if detected_dates else 'None'}")
-        st.markdown(f"**💰 Financial Columns Identified:** {', '.join(detected_money) if detected_money else 'None'}")
-        st.markdown(f"**📞 Contact Columns Identified:** {', '.join(detected_phones) if detected_phones else 'None'}")
 
     # 6. CONVERT CLEAN DATA INTO LIVE DOWNLOAD STREAM
     output_buffer = io.BytesIO()
