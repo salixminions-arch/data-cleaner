@@ -1,0 +1,7 @@
+[development]
+# Hides the "View source" button and development options
+showErrorDetails = false
+
+[client]
+# Disables the toolbar menu options at the top right
+toolbarMode = "minimal"
