@@ -4,7 +4,7 @@ import pandas as pd
 # 1. PAGE CONFIG
 st.set_page_config(page_title="Universal Sheet Cleaner", page_icon="🧼", layout="centered")
 st.title("🧼 Universal Spreadsheet Data Cleaner")
-st.write("Load a sample file instantly, apply basic fixes, and inspect the changes.")
+st.write("Upload a messy file or load a sample dataset instantly to test out the basic cleaning fixes.")
 
 # 2. DEFINING THREE DISTINCT MOCK SPREADSHEETS
 SAMPLES = {
@@ -41,27 +41,49 @@ with app_tab:
             del st.session_state[key]
         st.rerun()
 
-    st.write("### ⚡ One-Click Sample File Loader")
-    st.write("Click any sample file button below to load it into the system:")
+    # 4. TWO WAYS TO LOAD DATA (UPLOAD OR SAMPLES)
+    st.write("### 📥 Step 1: Choose Your Data Source")
     
-    # One-click loading triggers
+    # Method A: File Upload
+    uploaded_file = st.file_uploader("Option A: Upload your own messy file (CSV or Excel)", type=["csv", "xlsx"])
+    
+    if uploaded_file is not None:
+        if "raw_df" not in st.session_state or st.session_state.get("file_source") != "uploaded" or st.session_state.get("file_name") != uploaded_file.name:
+            try:
+                if uploaded_file.name.endswith('.csv'):
+                    st.session_state["raw_df"] = pd.read_csv(uploaded_file)
+                else:
+                    st.session_state["raw_df"] = pd.read_excel(uploaded_file)
+                st.session_state["file_name"] = uploaded_file.name
+                st.session_state["file_source"] = "uploaded"
+            except Exception as e:
+                st.error(f"Could not read file: {e}")
+                st.stop()
+
+    st.write("OR")
+    st.write("##### Option B: One-Click Sample File Loader")
+    
+    # Method B: One-click buttons
     c1, c2, c3 = st.columns(3)
     if c1.button("📊 Load Sales Data", use_container_width=True):
         st.session_state["raw_df"] = SAMPLES["Sales Data"].copy()
-        st.session_state["file_name"] = "Sales Data"
+        st.session_state["file_name"] = "Sales Data (Sample)"
+        st.session_state["file_source"] = "sample"
     if c2.button("📦 Load Inventory Data", use_container_width=True):
         st.session_state["raw_df"] = SAMPLES["Inventory Data"].copy()
-        st.session_state["file_name"] = "Inventory Data"
+        st.session_state["file_name"] = "Inventory Data (Sample)"
+        st.session_state["file_source"] = "sample"
     if c3.button("👥 Load Employee Directory", use_container_width=True):
         st.session_state["raw_df"] = SAMPLES["Employee Directory"].copy()
-        st.session_state["file_name"] = "Employee Directory"
+        st.session_state["file_name"] = "Employee Directory (Sample)"
+        st.session_state["file_source"] = "sample"
 
-    # Check if data is loaded into session state
+    # 5. PIPELINE PROCESSING ENGINE
     if "raw_df" in st.session_state:
         original_df = st.session_state["raw_df"]
         working_df = original_df.copy(deep=True)
         
-        # 4. SIDEBAR CONTROLS
+        # SIDEBAR CONTROLS
         st.sidebar.header("🛠️ Auto-Cleaning Toggles")
         drop_empty = st.sidebar.checkbox("Drop Completely Empty Rows", value=True)
         remove_dup = st.sidebar.checkbox("Delete Duplicate Rows", value=True)
@@ -71,7 +93,7 @@ with app_tab:
         # Dictionary to track metrics
         stats = {"dups_removed": 0, "empty_removed": 0, "text_fixed": 0, "nums_fixed": 0}
 
-        # 5. AUTOMATED PROCESSING PIPELINE
+        # AUTOMATED PROCESSING PIPELINE
         if drop_empty:
             before = len(working_df)
             working_df = working_df.dropna(how='all')
@@ -90,7 +112,7 @@ with app_tab:
             if sample_str.empty:
                 continue
 
-            # Text / Email Cleaning
+            # Text Cleaning
             if clean_text:
                 if working_df[col].dtype == 'object' or sample_str.str.replace(r'[^a-zA-Z]', '', regex=True).str.len().gt(0).any():
                     working_df[col] = working_df[col].fillna('').astype(str).str.strip()
@@ -115,6 +137,7 @@ with app_tab:
                     stats["nums_fixed"] += 1
 
         # 6. VISUAL PROOF DASHBOARD
+        st.write("---")
         st.subheader(f"📊 Cleaning Report: {st.session_state['file_name']}")
         mc1, mc2, mc3, mc4 = st.columns(4)
         mc1.metric("Empty Rows Hit", stats["empty_removed"])
@@ -134,7 +157,7 @@ with app_tab:
             st.write("Here is the raw data exactly how it was loaded:")
             st.dataframe(original_df, use_container_width=True)
     else:
-        st.info("💡 Please click one of the load buttons above to see the cleaning pipeline in action.")
+        st.info("💡 Please upload a file or click one of the sample load buttons above to begin.")
 
 # ==========================================
 # TAB 2: VIEW SAMPLE FILES (INSPECTION PAGE)
