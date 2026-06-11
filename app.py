@@ -79,6 +79,7 @@ with app_tab:
         st.session_state["file_source"] = "sample"
 
     # 5. PIPELINE PROCESSING ENGINE
+   # 5. PIPELINE PROCESSING ENGINE
     if "raw_df" in st.session_state:
         original_df = st.session_state["raw_df"]
         working_df = original_df.copy(deep=True)
@@ -93,17 +94,13 @@ with app_tab:
         # Dictionary to track metrics
         stats = {"dups_removed": 0, "empty_removed": 0, "text_fixed": 0, "nums_fixed": 0}
 
-        # AUTOMATED PROCESSING PIPELINE
+        # --- STEP 1: DROP COMPLETELY EMPTY ROWS FIRST ---
         if drop_empty:
             before = len(working_df)
             working_df = working_df.dropna(how='all')
             stats["empty_removed"] = before - len(working_df)
 
-        if remove_dup:
-            before = len(working_df)
-            working_df = working_df.drop_duplicates()
-            stats["dups_removed"] = before - len(working_df)
-
+        # --- STEP 2: STANDARDIZE TEXT & NUMBERS BEFORE DUPLICATE CHECKING ---
         for col in working_df.columns:
             if working_df[col].isnull().all():
                 continue
@@ -115,26 +112,40 @@ with app_tab:
             # Text Cleaning
             if clean_text:
                 if working_df[col].dtype == 'object' or sample_str.str.replace(r'[^a-zA-Z]', '', regex=True).str.len().gt(0).any():
+                    # Track if changes actually happen in this column
+                    old_series = working_df[col].copy()
+                    
                     working_df[col] = working_df[col].fillna('').astype(str).str.strip()
                     
                     if sample_str.str.contains(r'@', regex=True).any():
                         working_df[col] = working_df[col].str.lower()
-                        stats["text_fixed"] += 1
                     else:
                         working_df[col] = working_df[col].str.title()
-                        stats["text_fixed"] += 1
                     
                     working_df[col] = working_df[col].replace(['Nan', 'nan', 'None', 'none', ''], None)
+                    
+                    # Only increment if data actually changed
+                    if not old_series.equals(working_df[col]):
+                        stats["text_fixed"] += 1
 
             # Number Cleaning
             if clean_numbers:
+                old_series = working_df[col].copy()
                 if working_df[col].dtype == 'object' and sample_str.str.contains(r'[\$,%]', regex=True).any():
                     working_df[col] = working_df[col].fillna('').astype(str).str.replace(r'[\$,%]', '', regex=True)
                     working_df[col] = pd.to_numeric(working_df[col], errors='coerce')
-                    stats["nums_fixed"] += 1
+                    if not old_series.equals(working_df[col]):
+                        stats["nums_fixed"] += 1
                 elif pd.api.types.is_float_dtype(working_df[col]):
                     working_df[col] = working_df[col].round(2)
-                    stats["nums_fixed"] += 1
+                    if not old_series.equals(working_df[col]):
+                        stats["nums_fixed"] += 1
+
+        # --- STEP 3: DELETE DUPLICATES LAST (Now that rows are perfectly identical) ---
+        if remove_dup:
+            before = len(working_df)
+            working_df = working_df.drop_duplicates()
+            stats["dups_removed"] = before - len(working_df)
 
         # 6. VISUAL PROOF DASHBOARD
         st.write("---")
